@@ -42,6 +42,98 @@ def empty_matrix(seqs):
     ]
 
 
+def traceback_arrows(i, j, k, seq1_base, seq2_base, seq3_base, D):
+
+    node_score = D[i][j][k]
+
+    up = D[i - i][j][k]
+    left = D[i][j - 1][k]
+    depth = D[i][j][k - 1]
+
+    diag_up = D[i][j - 1][k - 1]
+    diag_left = D[i - 1][j][k - 1]
+    diag_depth = D[i - 1][j - 1][k]
+
+    diag_all = D[i - 1][j - 1][k - 1]
+
+    match_score_all = (
+        score_matrix[seq1_base][seq2_base]
+        + score_matrix[seq1_base][seq3_base]
+        + score_matrix[seq2_base][seq3_base]
+    )
+    match_score_up = score_matrix[seq1_base][seq2_base]
+    match_score_left = score_matrix[seq1_base][seq3_base]
+    match_score_depth = score_matrix[seq2_base][seq3_base]
+
+    if node_score == diag_all + match_score_all:
+        return "diag_all"
+    elif node_score == diag_up + match_score_up:
+        return "diag_up"
+    elif node_score == diag_left + match_score_left:
+        return "diag_left"
+    elif node_score == diag_depth + match_score_depth:
+        return "diag_depth"
+    elif node_score == up + (2 * gap_penalty):
+        return "up"
+    elif node_score == left + (2 * gap_penalty):
+        return "left"
+    elif node_score == depth + (2 * gap_penalty):
+        return "depth"
+
+
+def traceback(D, seq_dict):
+    seq1, seq2, seq3 = seq_dict["seq1"], seq_dict["seq2"], seq_dict["seq3"]
+    i, j, k = len(seq1) - 1, len(seq2) - 1, len(seq3) - 1
+    seq1_align, seq2_align, seq3_align = "", "", ""
+    while i > 0 or j > 0 or k > 0:
+        arrows = traceback_arrows(i, j, k, seq1[i - 1], seq2[j - 1], seq3[k - 1], D)
+        if arrows == "diag_all":
+            seq1_align += seq1[i - 1]
+            seq2_align += seq2[j - 1]
+            seq3_align += seq3[k - 1]
+            i -= 1
+            j -= 1
+            k -= 1
+        elif arrows == "diag_up":
+            seq1_align += seq1[i - 1]
+            seq2_align += seq2[j - 1]
+            seq3_align += "-"
+            i -= 1
+            j -= 1
+        elif arrows == "diag_left":
+            seq1_align += seq1[i - 1]
+            seq2_align += "-"
+            seq3_align += seq3[k - 1]
+            i -= 1
+            k -= 1
+        elif arrows == "diag_depth":
+            seq1_align += "-"
+            seq2_align += seq2[j - 1]
+            seq3_align += seq3[k - 1]
+            j -= 1
+            k -= 1
+        elif arrows == "up":
+            seq1_align += seq1[i - 1]
+            seq2_align += seq2[j - 1]
+            seq3_align += "-"
+            i -= 1
+            j -= 1
+        elif arrows == "left":
+            seq1_align += seq1[i - 1]
+            seq2_align += "-"
+            seq3_align += seq3[k - 1]
+            i -= 1
+            k -= 1
+        elif arrows == "depth":
+            seq1_align += "-"
+            seq2_align += seq2[j - 1]
+            seq3_align += seq3[k - 1]
+            j -= 1
+            k -= 1
+        print(f"{seq1_align}, {seq2_align}, {seq3_align}")
+    return seq1_align[::-1], seq2_align[::-1], seq3_align[::-1]
+
+
 def D_calc(seq_dict):
     seq1, seq2, seq3 = seq_dict["seq1"], seq_dict["seq2"], seq_dict["seq3"]
 
@@ -82,8 +174,19 @@ def D_calc(seq_dict):
                 D[i][j][k] = min(v0, v1, v2, v3, v4, v5, v6, v7)
                 # print(f"D:{D[i][j][k]}\ni:{i}\nj:{j}\nk:{k}\n")
 
-    return D[-1][-1][-1]
+    return D
 
 
-print(D_calc(short_seq))
+# print(
+#     traceback_arrows(
+#         len(short_seq["seq1"]) - 1,
+#         len(short_seq["seq2"]) - 1,
+#         len(short_seq["seq3"]) - 1,
+#         short_seq["seq1"][-1],
+#         short_seq["seq2"][-1],
+#         short_seq["seq3"][-1],
+#         D_calc(short_seq),
+#     )
+# )
+print(traceback(D_calc(short_seq), short_seq))
 # print(D_calc(long_seq))
