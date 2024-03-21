@@ -33,13 +33,8 @@ def get_Pairwisealignments(seqs, gap_penalty, score_matrix):
 
 
 def empty_matrix(seqs):
-    return [
-        [
-            [None for _ in range(len(seqs["seq1"]) + 1)]
-            for _ in range(len(seqs["seq2"]) + 1)
-        ]
-        for _ in range(len(seqs["seq3"]) + 1)
-    ]
+    seq1, seq2, seq3 = seqs["seq1"], seqs["seq2"], seqs["seq3"]
+    return np.full((len(seq1), len(seq2), len(seq3)), None)
 
 
 def traceback_arrows(i, j, k, seq1_base, seq2_base, seq3_base, D):
@@ -57,9 +52,7 @@ def traceback_arrows(i, j, k, seq1_base, seq2_base, seq3_base, D):
     diag_all = D[i - 1][j - 1][k - 1]
 
     match_score_all = (
-        score_matrix[seq1_base][seq2_base]
-        + score_matrix[seq1_base][seq3_base]
-        + score_matrix[seq2_base][seq3_base]
+        score_matrix[seq1_base][seq2_base] + score_matrix[seq1_base][seq3_base] + score_matrix[seq2_base][seq3_base]
     )
     match_score_up = score_matrix[seq1_base][seq2_base]
     match_score_left = score_matrix[seq1_base][seq3_base]
@@ -130,6 +123,7 @@ def traceback(D, seq_dict):
             seq3_align += seq3[k - 1]
             j -= 1
             k -= 1
+        print(f"{arrows}")
         print(f"{seq1_align}, {seq2_align}, {seq3_align}")
     return seq1_align[::-1], seq2_align[::-1], seq3_align[::-1]
 
@@ -147,6 +141,9 @@ def D_calc(seq_dict):
     for i in range(len(seq1)):
         for j in range(len(seq2)):
             for k in range(len(seq3)):
+                basei = seq1[i]
+                basej = seq2[j]
+                basek = seq3[k]
                 scores = [
                     score_matrix[seq1[i]][seq2[j]],
                     score_matrix[seq1[i]][seq3[k]],
@@ -154,6 +151,7 @@ def D_calc(seq_dict):
                 ]
 
                 v0 = v1 = v2 = v3 = v4 = v5 = v6 = v7 = float("inf")
+
                 if i == 0 and j == 0 and k == 0:
                     v0 = 0
                 if i > 0 and j > 0 and k > 0:
@@ -170,7 +168,6 @@ def D_calc(seq_dict):
                     v6 = D[i][j - 1][k] + (2 * gap_penalty)
                 if i >= 0 and j >= 0 and k > 0:
                     v7 = D[i][j][k - 1] + (2 * gap_penalty)
-
                 D[i][j][k] = min(v0, v1, v2, v3, v4, v5, v6, v7)
                 # print(f"D:{D[i][j][k]}\ni:{i}\nj:{j}\nk:{k}\n")
 
