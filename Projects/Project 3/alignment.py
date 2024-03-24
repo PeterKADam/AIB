@@ -14,7 +14,7 @@ class alignment_matrix:
     def completealignment(self):
         self.prepare_matrixes()
         self.fill_matrixes()
-        self.get_alignments()
+        # self.get_alignments()
 
     def empty_matrix(self):
         return [[None] * (len(self.sequence1) + 1) for _ in range(len(self.sequence2) + 1)]

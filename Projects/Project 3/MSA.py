@@ -23,15 +23,6 @@ long_seq = {
 }
 
 
-def get_Pairwisealignments(seqs, gap_penalty, score_matrix):
-    alignments = {}
-    for seq1, seq2 in combinations(seqs.keys(), 2):
-        alignments[(seq1, seq2)] = alignment.LinearGlobalAlignment(
-            seqs[seq1], seqs[seq2], score_matrix, gap_penalty
-        ).alignments[0][0]
-    return alignments
-
-
 def empty_matrix(seqs):
     seq1, seq2, seq3 = seqs["seq1"], seqs["seq2"], seqs["seq3"]
     return np.full((len(seq1), len(seq2), len(seq3)), None)
@@ -132,28 +123,48 @@ def D_calc(seq_dict):
     seq1, seq2, seq3 = seq_dict["seq1"], seq_dict["seq2"], seq_dict["seq3"]
 
     # D = empty_matrix(seq_dict)
-    D = np.full((len(seq1), len(seq2), len(seq3)), None)
+    D = np.full((len(seq1) + 1, len(seq2) + 1, len(seq3) + 1), None)
     # print(f"D:{len(D)}{len(D[0])}{len(D[[0][0]])}")
-    len_i = len(seq1)
-    len_j = len(seq2)
-    len_k = len(seq3)
+
+    # it really helps to cache the pairwise alignments, because they are used a lot
+    # and [i],[j] is the same as [:i], [:j] in the alignment matrix (eg, you dont have to calculate the smaller alignment for every step.)
+    # these have to have reversed indexes, because reasons
+    alignmentscache_ij = alignment.LinearGlobalAlignment(seq2, seq1, score_matrix, gap_penalty).matrix
+    alignmentscache_ik = alignment.LinearGlobalAlignment(seq3, seq1, score_matrix, gap_penalty).matrix
+    alignmentscache_jk = alignment.LinearGlobalAlignment(seq3, seq2, score_matrix, gap_penalty).matrix
 
     for i in range(len(seq1)):
         for j in range(len(seq2)):
-            for k in range(len(seq3)):
-                basei = seq1[i]
-                basej = seq2[j]
-                basek = seq3[k]
+            D[i][j][0] = alignmentscache_ij[i][j] + (i + j) * gap_penalty
+            # print(D[i][j][0])
+    for i in range(len(seq1)):
+        for k in range(len(seq3)):
+            D[i][0][k] = alignmentscache_ik[i][k] + (i + k) * gap_penalty
+    for j in range(len(seq2)):
+        for k in range(len(seq3)):
+            D[0][j][k] = alignmentscache_jk[j][k] + (k + j) * gap_penalty
+
+    # print(f"D:{D[0][0]}")
+
+    for i in range(0, len(seq1) + 1):
+        for j in range(0, len(seq2) + 1):
+            for k in range(0, len(seq3) + 1):
+                # basei = seq1[i]
+                # basej = seq2[j]
+                # basek = seq3[k]
+
+                # This is technically reverse indexing ie [-1] on the first pass, but the scores arent used at any [0] so yolo
                 scores = [
-                    score_matrix[seq1[i]][seq2[j]],
-                    score_matrix[seq1[i]][seq3[k]],
-                    score_matrix[seq2[j]][seq3[k]],
+                    score_matrix[seq1[i - 1]][seq2[j - 1]],
+                    score_matrix[seq1[i - 1]][seq3[k - 1]],
+                    score_matrix[seq2[j - 1]][seq3[k - 1]],
                 ]
 
                 v0 = v1 = v2 = v3 = v4 = v5 = v6 = v7 = float("inf")
 
                 if i == 0 and j == 0 and k == 0:
                     v0 = 0
+
                 if i > 0 and j > 0 and k > 0:
                     v1 = D[i - 1][j - 1][k - 1] + scores[0] + scores[1] + scores[2]
                 if i > 0 and j > 0 and k >= 0:
@@ -171,19 +182,10 @@ def D_calc(seq_dict):
                 D[i][j][k] = min(v0, v1, v2, v3, v4, v5, v6, v7)
                 # print(f"D:{D[i][j][k]}\ni:{i}\nj:{j}\nk:{k}\n")
 
+        if (i / len(seq1)) * 100 % 5 == 0 and i != 0:
+            print(f"{(i / len(seq1)) * 100}%")
+
     return D
 
 
-# print(
-#     traceback_arrows(
-#         len(short_seq["seq1"]) - 1,
-#         len(short_seq["seq2"]) - 1,
-#         len(short_seq["seq3"]) - 1,
-#         short_seq["seq1"][-1],
-#         short_seq["seq2"][-1],
-#         short_seq["seq3"][-1],
-#         D_calc(short_seq),
-#     )
-# )
-print(traceback(D_calc(short_seq), short_seq))
-# print(D_calc(long_seq))
+print(D_calc(long_seq)[-1][-1][-1])
