@@ -1,6 +1,7 @@
 import alignment
 from itertools import combinations
 import numpy as np
+import sys
 
 score_matrix = {
     "A": {"A": 0, "C": 5, "G": 2, "T": 5},
@@ -32,19 +33,20 @@ def traceback_arrows(i, j, k, seq1_base, seq2_base, seq3_base, D):
 
     node_score = D[i][j][k]
 
-    up = D[i - i][j][k]
+    up = D[i - 1][j][k]
     left = D[i][j - 1][k]
     depth = D[i][j][k - 1]
 
-    diag_up = D[i][j - 1][k - 1]
+    diag_up = D[i - 1][j - 1][k]
     diag_left = D[i - 1][j][k - 1]
-    diag_depth = D[i - 1][j - 1][k]
+    diag_depth = D[i][j - 1][k - 1]
 
     diag_all = D[i - 1][j - 1][k - 1]
 
     match_score_all = (
         score_matrix[seq1_base][seq2_base] + score_matrix[seq1_base][seq3_base] + score_matrix[seq2_base][seq3_base]
     )
+
     match_score_up = score_matrix[seq1_base][seq2_base]
     match_score_left = score_matrix[seq1_base][seq3_base]
     match_score_depth = score_matrix[seq2_base][seq3_base]
@@ -64,10 +66,12 @@ def traceback_arrows(i, j, k, seq1_base, seq2_base, seq3_base, D):
     elif node_score == depth + (2 * gap_penalty):
         return "depth"
 
+    sys.exit("Error in traceback_arrows: no match found.")
+
 
 def traceback(D, seq_dict):
     seq1, seq2, seq3 = seq_dict["seq1"], seq_dict["seq2"], seq_dict["seq3"]
-    i, j, k = len(seq1) - 1, len(seq2) - 1, len(seq3) - 1
+    i, j, k = len(seq1), len(seq2), len(seq3)
     seq1_align, seq2_align, seq3_align = "", "", ""
     while i > 0 or j > 0 or k > 0:
         arrows = traceback_arrows(i, j, k, seq1[i - 1], seq2[j - 1], seq3[k - 1], D)
@@ -114,8 +118,8 @@ def traceback(D, seq_dict):
             seq3_align += seq3[k - 1]
             j -= 1
             k -= 1
-        print(f"{arrows}")
-        print(f"{seq1_align}, {seq2_align}, {seq3_align}")
+        # print(f"{arrows}")
+        # print(f"{seq1_align}, {seq2_align}, {seq3_align}")
     return seq1_align[::-1], seq2_align[::-1], seq3_align[::-1]
 
 
@@ -126,7 +130,7 @@ def D_calc(seq_dict):
     D = np.full((len(seq1) + 1, len(seq2) + 1, len(seq3) + 1), None)
     # print(f"D:{len(D)}{len(D[0])}{len(D[[0][0]])}")
 
-    # it really helps to cache the pairwise alignments, because they are used a lot
+    # it really helps to cache the pairwise alignments, because they are used a lot, theyre probably gonna be cpu cached anyway, but whatever, now theyre explicit.
     # and [i],[j] is the same as [:i], [:j] in the alignment matrix (eg, you dont have to calculate the smaller alignment for every step.)
     # these have to have reversed indexes, because reasons
     alignmentscache_ij = alignment.LinearGlobalAlignment(seq2, seq1, score_matrix, gap_penalty).matrix
@@ -188,4 +192,4 @@ def D_calc(seq_dict):
     return D
 
 
-print(D_calc(long_seq)[-1][-1][-1])
+print(traceback(D_calc(short_seq), short_seq))
