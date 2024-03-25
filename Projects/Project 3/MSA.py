@@ -194,11 +194,11 @@ def D_calc(seq_dict, score_matrix, gap_penalty):
 
 
 def sp_exact_3(seq_dict, score, gap, alignment: bool = False):
-    D = D_calc(seq_dict)
+    D = D_calc(seq_dict, score, gap)
     if not alignment:
         return D[-1][-1][-1]
     else:
-        return traceback(D_calc(seq_dict), seq_dict)
+        return traceback(D, seq_dict)
 
 
 ##approximate MSA
@@ -327,8 +327,8 @@ def MSA(seqs, score, gap):
 
 
 # print(find_center_string(long_seq, score_matrix, gap_penalty))
-MSA(short_seq, score_matrix, gap_penalty)
-
+# MSA(short_seq, score_matrix, gap_penalty)
+print(sp_exact_3(short_seq, score_matrix, gap_penalty, alignment=False))
 # print(traceback(D_calc(short_seq), short_seq))
 
 ### load files for tests
