@@ -219,16 +219,7 @@ def find_center_key(seqs, score, gap):
     return center_key
 
 
-def extend_approx_MSA(M, Alignment):
-
-    MA = []
-    i = 0
-    j = 0
-
-    return MA
-
-
-def MSA(seqs, score, gap):
+def MSA2(seqs, score, gap):
     center_key = find_center_key(seqs, score, gap)
     center_seq = seqs.pop(center_key)
     alignments = []  # a list is exceptionally terrible to use here.
@@ -240,11 +231,99 @@ def MSA(seqs, score, gap):
 
     M = []
 
-    for i in range(len(alignments[0][1])):
-        M.append([alignments[0][0][i]])
 
-    for i in range(1, len(alignments)):
-        M = extend_approx_MSA(M, alignments[i])
+def strings_to_lists(alignment):
+    # Use zip function to iterate over corresponding characters of each string
+    # Then use list comprehension to create the list of lists
+    return [list(chars) for chars in zip(*alignment)]
+
+
+def lists_to_strings(list_of_lists):
+    # Use zip function to iterate over corresponding elements of each list
+    # Then join the characters together and append to a new list
+    return ["".join(chars) for chars in zip(*list_of_lists)]
+
+
+def MSA(seqs, score, gap):
+    center_key = find_center_key(seqs, score, gap)
+    center_seq = seqs.pop(center_key)
+    alignments = []  # a list is exceptionally terrible to use here.
+
+    for key, seq in seqs.items():
+        if center_seq != seq:
+            A1 = alignment.LinearGlobalAlignment(seq, center_seq, score, gap).get_alignments()[0]
+            A2 = strings_to_lists(A1)
+            alignments.append(A2)
+
+    M = alignments[0]
+    MA = []
+
+    for a in range(1, len(alignments)):
+        i = 0
+        j = 0
+        A = alignments[a]
+
+        while i < len(M) and j < len(A):
+
+            # Invariant: (1) MA is a valid merge of all columns before column i in M
+            # and all columns before column in A, and (2) the first row of M and A up
+            # to (but not including) column i and j respectively is the same string
+            # if gaps are removed.
+
+            if M[i][0] == "-" and A[j][0] == "-":
+                # Case 1: The next column in MA is column i in M extended with the second symbol
+                # in column j in A.
+                M[i].append(A[j][1])
+                MA.append(M[i])
+                i = i + 1
+                j = j + 1
+
+            elif M[i][0] == "-" and A[j][0] != "-":
+                # Case 2: A[j][0] is a character, so the second symbol in column j in A, A[j][1],
+                # must be in the column of MA that is the column in M where the first symbol corresponds
+                # to A[j][0]. By the invariant, this column in M is the next column in M, where the first
+                # symbol is a character, so we just moved forward in M until we find this column.
+                M[i].append("-")
+                MA.append(M[i])
+                i = i + 1
+
+            elif M[i][0] != "-" and A[j][0] == "-":
+                # Case 3: M[i][0] is a character, so column i in M must be in the column of MA that also
+                # contains the second symbol from the column in A, where the first symbol is the character
+                # corresponding to M[i][0]. By the invariant, this column in A is the next column in A,
+                # where the first symbol is a character, so we just add columns from A to MA until we
+                # find this column.
+                c = ["-"] * len(M[i])
+                c.append(A[j][1])
+                MA.append(c)
+                j = j + 1
+
+            elif M[i][0] != "-" and A[j][0] != "-":
+                # Case 4: By the invariant the characters M[i][0] and A[j][0] are at the same position
+                # in the string spelled by the row of M and A if gaps are removed. The next column in
+                # MA is thus column i in M extended with the second symbol in column j in A.
+                M[i].append(A[j][1])
+                MA.append(M[i])
+                i = i + 1
+                j = j + 1
+
+        if i < len(M):
+            # add the remaining coloumns of M to MA
+            while i < len(M):
+                MA.append(M[i].append("-"))
+                i = i + 1
+
+        if j < len(A):
+            # add the remaining columns of A to MA
+            k = len(MA[-1])
+            while j < len(A):
+                c = ["-"] * (k - 1)
+                c.append(A[j][1])
+                MA.append(c)
+                j = j + 1
+
+    # MA2 = lists_to_strings(MA)
+    return MA
 
 
 # print(find_center_string(long_seq, score_matrix, gap_penalty))
@@ -293,7 +372,7 @@ def experiment_1():
         print(f"{alignment}")
 
 
-experiment_1()
+# experiment_1()
 
 
 ## experiment 2
@@ -307,7 +386,7 @@ def experiment2_():
     print(f"Experiment 2 optimal score: {ex2_optimal}\n Center sequence: {ex2_center_key}")
 
 
-experiment2_()
+# experiment2_()
 
 
 ### experiment 3
@@ -340,31 +419,43 @@ def experiment3():
 
 
 def presentation():
-	seq_sets = [
-		["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus"],
-		["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens"],
-		["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens", "brca1_macaca_mulatta"],
-		["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens", "brca1_macaca_mulatta", "brca1_mus_musculus"]
-	]
+    seq_sets = [
+        ["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus"],
+        ["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens"],
+        ["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens", "brca1_macaca_mulatta"],
+        [
+            "brca1_bos_taurus",
+            "brca1_canis_lupus",
+            "brca1_gallus_gallus",
+            "brca1_homo_sapiens",
+            "brca1_macaca_mulatta",
+            "brca1_mus_musculus",
+        ],
+    ]
 
-	# Expand the score matrix to include 'N' as a mismatch
-	score_matrix["N"] = {base: 5 for base in "ACGTN"}
+    # Expand the score matrix to include 'N' as a mismatch
+    score_matrix["N"] = {base: 5 for base in "ACGTN"}
 
-	with open("alignment.fasta", "w") as f:
-		for i, seq_set in enumerate(seq_sets):
-			seqs = {key: value for key, value in load_sequences(r"Projects\Project 3\data\brca1-testseqs.fasta").items() if key in seq_set}
-			optimal, alignment = MSA(seqs, score_matrix, gap_penalty)
-			print(f"Optimal score for {seq_set}: {optimal}")
-			f.write(f"# Alignment {i+1}\n")
-			for key, value in alignment.items():
-				f.write(f">{key}\n{value}\n")
+    with open("alignment.fasta", "w") as f:
+        for i, seq_set in enumerate(seq_sets):
+            seqs = {
+                key: value
+                for key, value in load_sequences(r"Projects\Project 3\data\brca1-testseqs.fasta").items()
+                if key in seq_set
+            }
+            optimal, alignment = MSA(seqs, score_matrix, gap_penalty)
+            print(f"Optimal score for {seq_set}: {optimal}")
+            f.write(f"# Alignment {i+1}\n")
+            for key, value in alignment.items():
+                f.write(f">{key}\n{value}\n")
 
-		# For the full length BRCA1 genes
-		seqs = load_sequences(r"Projects\Project 3\data\brca1-full.fasta")
-		optimal, alignment = MSA(seqs, score_matrix, gap_penalty)
-		print(f"Optimal score for full length BRCA1 genes: {optimal}")
-		f.write("# Full length BRCA1 genes alignment\n")
-		for key, value in alignment.items():
-			f.write(f">{key}\n{value}\n")
+        # For the full length BRCA1 genes
+        seqs = load_sequences(r"Projects\Project 3\data\brca1-full.fasta")
+        optimal, alignment = MSA(seqs, score_matrix, gap_penalty)
+        print(f"Optimal score for full length BRCA1 genes: {optimal}")
+        f.write("# Full length BRCA1 genes alignment\n")
+        for key, value in alignment.items():
+            f.write(f">{key}\n{value}\n")
 
-presentation()
+
+# presentation()
