@@ -51,11 +51,11 @@ def traceback_arrows(i, j, k, seq1_base, seq2_base, seq3_base, D):
 
     if node_score == diag_all + match_score_all:
         return "diag_all"
-    elif node_score == diag_up + match_score_up:
+    elif node_score == diag_up + match_score_up + (2 * gap_penalty):
         return "diag_up"
-    elif node_score == diag_left + match_score_left:
+    elif node_score == diag_left + match_score_left + (2 * gap_penalty):
         return "diag_left"
-    elif node_score == diag_depth + match_score_depth:
+    elif node_score == diag_depth + match_score_depth + (2 * gap_penalty):
         return "diag_depth"
     elif node_score == up + (2 * gap_penalty):
         return "up"
@@ -193,7 +193,7 @@ def D_calc(seq_dict):
 ##approximate MSA
 
 
-def find_center_string(seqs, score, gap):
+def find_center_key(seqs, score, gap):
     # find the center string by comparing all the sequences to each other
     min_score = float("inf")
     center_key = None
@@ -210,21 +210,33 @@ def find_center_string(seqs, score, gap):
 
 def extend_approx_MSA(M, Alignment):
 
-    return M
+    MA = []
+    i = 0
+    j = 0
+
+    return MA
 
 
 def MSA(seqs, score, gap):
-    center_key = find_center_string(seqs, score, gap)
+    center_key = find_center_key(seqs, score, gap)
     center_seq = seqs.pop(center_key)
-    alignments = []
+    alignments = []  # a list is exceptionally terrible to use here.
+
     for key, seq in seqs.items():
         all_alignments = alignments.append(
             alignment.LinearGlobalAlignment(center_seq, seq, score, gap).get_alignments()[0]
         )
+
     M = []
 
+    for i in range(len(alignments[0][1])):
+        M.append([alignments[0][0][i]])
 
+    for i in range(1, len(alignments)):
+        M = extend_approx_MSA(M, alignments[i])
 
 
 # print(find_center_string(long_seq, score_matrix, gap_penalty))
 MSA(short_seq, score_matrix, gap_penalty)
+
+# print(traceback(D_calc(short_seq), short_seq))
