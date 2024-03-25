@@ -24,9 +24,7 @@ long_seq = {
 }
 
 
-def empty_matrix(seqs):
-    seq1, seq2, seq3 = seqs["seq1"], seqs["seq2"], seqs["seq3"]
-    return np.full((len(seq1), len(seq2), len(seq3)), None)
+# exact MSA
 
 
 def traceback_arrows(i, j, k, seq1_base, seq2_base, seq3_base, D):
@@ -192,4 +190,41 @@ def D_calc(seq_dict):
     return D
 
 
-print(traceback(D_calc(short_seq), short_seq))
+##approximate MSA
+
+
+def find_center_string(seqs, score, gap):
+    # find the center string by comparing all the sequences to each other
+    min_score = float("inf")
+    center_key = None
+    for key, seq in seqs.items():
+        score_sum = 0
+        for key2, seq2 in seqs.items():
+            if key != key2:
+                score_sum += alignment.LinearGlobalAlignment(seq, seq2, score, gap).get_max()
+        if score_sum < min_score:
+            min_score = score_sum
+            center_key = key
+    return center_key
+
+
+def extend_approx_MSA(M, Alignment):
+
+    return M
+
+
+def MSA(seqs, score, gap):
+    center_key = find_center_string(seqs, score, gap)
+    center_seq = seqs.pop(center_key)
+    alignments = []
+    for key, seq in seqs.items():
+        all_alignments = alignments.append(
+            alignment.LinearGlobalAlignment(center_seq, seq, score, gap).get_alignments()[0]
+        )
+    M = []
+
+
+
+
+# print(find_center_string(long_seq, score_matrix, gap_penalty))
+MSA(short_seq, score_matrix, gap_penalty)

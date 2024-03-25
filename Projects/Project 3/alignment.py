@@ -51,6 +51,7 @@ class alignment_matrix:
         alignments = self.traceback_recursive(len(self.sequence2), len(self.sequence1))
         # Reverse the completed strings
         self.alignments = [(a1[::-1], a2[::-1]) for a1, a2 in alignments]
+        return self.alignments
 
     def print_finish_matrix(self):
 
