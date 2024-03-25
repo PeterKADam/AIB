@@ -2,6 +2,8 @@ import alignment
 from itertools import combinations
 import numpy as np
 import sys
+from Bio import SeqIO
+from Bio.Seq import Seq
 
 score_matrix = {
     "A": {"A": 0, "C": 5, "G": 2, "T": 5},
@@ -68,7 +70,7 @@ def traceback_arrows(i, j, k, seq1_base, seq2_base, seq3_base, D):
 
 
 def traceback(D, seq_dict):
-    seq1, seq2, seq3 = seq_dict["seq1"], seq_dict["seq2"], seq_dict["seq3"]
+    seq1, seq2, seq3 = seq_dict.values()
     i, j, k = len(seq1), len(seq2), len(seq3)
     seq1_align, seq2_align, seq3_align = "", "", ""
     while i > 0 or j > 0 or k > 0:
@@ -121,8 +123,8 @@ def traceback(D, seq_dict):
     return seq1_align[::-1], seq2_align[::-1], seq3_align[::-1]
 
 
-def D_calc(seq_dict):
-    seq1, seq2, seq3 = seq_dict["seq1"], seq_dict["seq2"], seq_dict["seq3"]
+def D_calc(seq_dict, score_matrix, gap_penalty):
+    seq1, seq2, seq3 = seq_dict.values()
 
     # D = empty_matrix(seq_dict)
     D = np.full((len(seq1) + 1, len(seq2) + 1, len(seq3) + 1), None)
@@ -185,9 +187,18 @@ def D_calc(seq_dict):
                 # print(f"D:{D[i][j][k]}\ni:{i}\nj:{j}\nk:{k}\n")
 
         if (i / len(seq1)) * 100 % 5 == 0 and i != 0:
+            print("\033[1A", end="\x1b[2K")
             print(f"{(i / len(seq1)) * 100}%")
 
     return D
+
+
+def sp_exact_3(seq_dict, score, gap, alignment: bool = False):
+    D = D_calc(seq_dict)
+    if not alignment:
+        return D[-1][-1][-1]
+    else:
+        return traceback(D_calc(seq_dict), seq_dict)
 
 
 ##approximate MSA
@@ -240,3 +251,120 @@ def MSA(seqs, score, gap):
 MSA(short_seq, score_matrix, gap_penalty)
 
 # print(traceback(D_calc(short_seq), short_seq))
+
+### load files for tests
+
+
+def load_match_scores(path):
+    MATCH_SCORES = {}
+
+    with open(path, "r") as file:
+        for line in file:
+            line = line.strip()
+            if line:
+                values = line.split()
+                key = values.pop(0)
+                MATCH_SCORES[key] = {k: int(v) for k, v in zip(["A", "C", "G", "T"], values)}
+    return MATCH_SCORES
+
+
+def load_sequences(filepath):
+    sequences = {}
+    for record in SeqIO.parse(filepath, "fasta"):
+        sequences[record.id] = str(record.seq)
+    return sequences
+
+
+### run tests
+
+### experiment 1
+
+
+def experiment_1():
+    ex1_seqs = load_sequences(r"Projects\Project 3\data\brca1-testseqs.fasta")
+    ex1_seqs = dict(list(ex1_seqs.items())[:3])
+
+    ex1_optimal = sp_exact_3(ex1_seqs, score_matrix, gap_penalty, alignment=False)
+
+    ex1_alignment = sp_exact_3(ex1_seqs, score_matrix, gap_penalty, alignment=True)
+
+    print(f"Experiment 1 optimal score: {ex1_optimal}")
+    for i, alignment in enumerate(ex1_alignment, start=1):
+        print(f"{alignment}")
+
+
+experiment_1()
+
+
+## experiment 2
+def experiment2_():
+    ex2_seqs = load_sequences(r"Projects\Project 3\data\brca1-testseqs.fasta")
+    ex2_seqs = dict(list(ex2_seqs.items())[:5])
+
+    ex2_center_key = find_center_key(ex2_seqs, score_matrix, gap_penalty)
+    ex2_optimal = MSA(ex2_seqs, score_matrix, gap_penalty)
+
+    print(f"Experiment 2 optimal score: {ex2_optimal}\n Center sequence: {ex2_center_key}")
+
+
+experiment2_()
+
+
+### experiment 3
+def experiment3():
+    import matplotlib.pyplot as plt
+
+    # Experiment 3
+    ratios = []
+    lengths = []
+
+    for i in range(10, 210, 10):
+        ex3_seqs = load_sequences(f"Projects/Project 3/data/testseqs_{i}_3.fasta")
+        ex3_seqs = dict(list(ex3_seqs.items())[:3])
+
+        ex3_optimal_exact = sp_exact_3(ex3_seqs, score_matrix, gap_penalty)
+        ex3_optimal_approx = sp_approx(ex3_seqs, score_matrix, gap_penalty)
+
+        ratio = ex3_optimal_approx / ex3_optimal_exact
+        ratios.append(ratio)
+        lengths.append(i)
+
+        print(f"Experiment 3 sequence length {i} ratio: {ratio}")
+
+    # Plot the ratios
+    plt.plot(lengths, ratios)
+    plt.xlabel("Sequence Length")
+    plt.ylabel("Approximation Ratio")
+    plt.title("Approximation Ratio of sp_approx to sp_exact_3")
+    plt.show()
+
+
+def presentation():
+	seq_sets = [
+		["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus"],
+		["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens"],
+		["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens", "brca1_macaca_mulatta"],
+		["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens", "brca1_macaca_mulatta", "brca1_mus_musculus"]
+	]
+
+	# Expand the score matrix to include 'N' as a mismatch
+	score_matrix["N"] = {base: 5 for base in "ACGTN"}
+
+	with open("alignment.fasta", "w") as f:
+		for i, seq_set in enumerate(seq_sets):
+			seqs = {key: value for key, value in load_sequences(r"Projects\Project 3\data\brca1-testseqs.fasta").items() if key in seq_set}
+			optimal, alignment = MSA(seqs, score_matrix, gap_penalty)
+			print(f"Optimal score for {seq_set}: {optimal}")
+			f.write(f"# Alignment {i+1}\n")
+			for key, value in alignment.items():
+				f.write(f">{key}\n{value}\n")
+
+		# For the full length BRCA1 genes
+		seqs = load_sequences(r"Projects\Project 3\data\brca1-full.fasta")
+		optimal, alignment = MSA(seqs, score_matrix, gap_penalty)
+		print(f"Optimal score for full length BRCA1 genes: {optimal}")
+		f.write("# Full length BRCA1 genes alignment\n")
+		for key, value in alignment.items():
+			f.write(f">{key}\n{value}\n")
+
+presentation()
