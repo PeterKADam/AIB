@@ -53,6 +53,12 @@ class alignment_matrix:
         self.alignments = [(a1[::-1], a2[::-1]) for a1, a2 in alignments]
         return self.alignments
 
+    def get_alignment(self):
+        alignments = self.traceback_nonrecursive(len(self.sequence2), len(self.sequence1))
+        # Reverse the completed strings
+        self.alignments = [(a1[::-1], a2[::-1]) for a1, a2 in alignments]
+        return self.alignments
+
     def print_finish_matrix(self):
 
         self.print_dp_matrix(self.matrix)
@@ -88,6 +94,40 @@ class alignment_matrix:
                 alignments.extend([(self.sequence2[row - n] + a1, (n * "-") + a2) for a1, a2 in sub_alignments])
             elif direction == "left":
                 sub_alignments = self.traceback_recursive(row, col - n)
+                alignments.extend([((n * "-") + a1, self.sequence1[col - n] + a2) for a1, a2 in sub_alignments])
+
+        return alignments
+
+    def traceback_nonrecursive(self, row, col):
+        if row == 0 and col == 0:
+            return [("", "")]
+        elif row == 0:
+            return [(col * "-", self.sequence1[:col])]
+        elif col == 0:
+            return [(self.sequence2[:row], row * "-")]
+
+        arrows = [
+            self.get_traceback_arrows(
+                row,
+                col,
+            )[0]
+        ]  # now this is software engineering
+
+        alignments = []
+
+        for arrow in arrows:
+            n, direction = arrow.split("_")
+            n = int(n)
+            if direction == "diagonal":
+                sub_alignments = self.traceback_nonrecursive(row - n, col - n)
+                alignments.extend(
+                    [(self.sequence2[row - n] + a1, self.sequence1[col - n] + a2) for a1, a2 in sub_alignments]
+                )
+            elif direction == "up":
+                sub_alignments = self.traceback_nonrecursive(row - n, col)
+                alignments.extend([(self.sequence2[row - n] + a1, (n * "-") + a2) for a1, a2 in sub_alignments])
+            elif direction == "left":
+                sub_alignments = self.traceback_nonrecursive(row, col - n)
                 alignments.extend([((n * "-") + a1, self.sequence1[col - n] + a2) for a1, a2 in sub_alignments])
 
         return alignments

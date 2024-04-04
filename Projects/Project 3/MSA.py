@@ -219,19 +219,6 @@ def find_center_key(seqs, score, gap):
     return center_key
 
 
-def MSA2(seqs, score, gap):
-    center_key = find_center_key(seqs, score, gap)
-    center_seq = seqs.pop(center_key)
-    alignments = []  # a list is exceptionally terrible to use here.
-
-    for key, seq in seqs.items():
-        all_alignments = alignments.append(
-            alignment.LinearGlobalAlignment(center_seq, seq, score, gap).get_alignments()[0]
-        )
-
-    M = []
-
-
 def strings_to_lists(alignment):
     # Use zip function to iterate over corresponding characters of each string
     # Then use list comprehension to create the list of lists
@@ -251,7 +238,11 @@ def MSA(seqs, score, gap):
 
     for key, seq in seqs.items():
         if center_seq != seq:
-            A1 = alignment.LinearGlobalAlignment(seq, center_seq, score, gap).get_alignments()[0]
+
+            print(f"Aligning {center_key} and {key}")
+            A1 = alignment.LinearGlobalAlignment(seq, center_seq, score, gap).get_alignment()[
+                0
+            ]  # in hindsight, we probably should have kept the single alignment implementation.
             A2 = strings_to_lists(A1)
             alignments.append(A2)
 
@@ -326,9 +317,24 @@ def MSA(seqs, score, gap):
     return MA
 
 
+def MSA_approx_score(MSA, score, gap):
+    MSA_approx = MSA
+    approx_score = 0
+    for sublist in MSA_approx:
+        for i in range(len(sublist)):
+            for j in range(i + 1, len(sublist)):
+                if sublist[i] == "-" and sublist[j] == "-":
+                    pass
+                elif sublist[i] == "-" or sublist[j] == "-":
+                    approx_score += gap
+                else:
+                    approx_score += score[sublist[i]][sublist[j]]
+    return approx_score
+
+
 # print(find_center_string(long_seq, score_matrix, gap_penalty))
 # MSA(short_seq, score_matrix, gap_penalty)
-print(sp_exact_3(short_seq, score_matrix, gap_penalty, alignment=False))
+# print(sp_exact_3(short_seq, score_matrix, gap_penalty, alignment=False))
 # print(traceback(D_calc(short_seq), short_seq))
 
 ### load files for tests
@@ -381,9 +387,9 @@ def experiment2_():
     ex2_seqs = dict(list(ex2_seqs.items())[:5])
 
     ex2_center_key = find_center_key(ex2_seqs, score_matrix, gap_penalty)
-    ex2_optimal = MSA(ex2_seqs, score_matrix, gap_penalty)
+    ex2_optimal = MSA_approx_score(ex2_seqs, score_matrix, gap_penalty)
 
-    print(f"Experiment 2 optimal score: {ex2_optimal}\n Center sequence: {ex2_center_key}")
+    print(f"\nExperiment 2 optimal score: {ex2_optimal}\n Center sequence: {ex2_center_key}")
 
 
 # experiment2_()
@@ -402,7 +408,7 @@ def experiment3():
         ex3_seqs = dict(list(ex3_seqs.items())[:3])
 
         ex3_optimal_exact = sp_exact_3(ex3_seqs, score_matrix, gap_penalty)
-        ex3_optimal_approx = sp_approx(ex3_seqs, score_matrix, gap_penalty)
+        ex3_optimal_approx = MSA_approx_score(ex3_seqs, score_matrix, gap_penalty)
 
         ratio = ex3_optimal_approx / ex3_optimal_exact
         ratios.append(ratio)
@@ -416,6 +422,9 @@ def experiment3():
     plt.ylabel("Approximation Ratio")
     plt.title("Approximation Ratio of sp_approx to sp_exact_3")
     plt.show()
+
+
+# experiment3()
 
 
 def presentation():
@@ -443,19 +452,13 @@ def presentation():
                 for key, value in load_sequences(r"Projects\Project 3\data\brca1-testseqs.fasta").items()
                 if key in seq_set
             }
-            optimal, alignment = MSA(seqs, score_matrix, gap_penalty)
+            alignment = MSA(seqs, score_matrix, gap_penalty)
+            optimal = MSA_approx_score(alignment, score_matrix, gap_penalty)
             print(f"Optimal score for {seq_set}: {optimal}")
             f.write(f"# Alignment {i+1}\n")
-            for key, value in alignment.items():
-                f.write(f">{key}\n{value}\n")
-
-        # For the full length BRCA1 genes
-        seqs = load_sequences(r"Projects\Project 3\data\brca1-full.fasta")
-        optimal, alignment = MSA(seqs, score_matrix, gap_penalty)
-        print(f"Optimal score for full length BRCA1 genes: {optimal}")
-        f.write("# Full length BRCA1 genes alignment\n")
-        for key, value in alignment.items():
-            f.write(f">{key}\n{value}\n")
+            strings = lists_to_strings(alignment)
+            for string in strings:
+                f.write(f"{string}\n")
 
 
-# presentation()
+presentation()
