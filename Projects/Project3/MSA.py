@@ -18,6 +18,7 @@ short_seq = {
     "seq2": "ATGGATTTATCTGCTCTTCG",
     "seq3": "TGCATGCTGAAACTTCTCAACCA",
 }
+
 short_score = 198
 long_seq = {
     "seq1": "GTTCCGAAAGGCTAGCGCTAGGCGCCAAGCGGCCGGTTTCCTTGGCGACGGAGAGCGCGGGAATTTTAGATAGATTGTAATTGCGGCTGCGCGGCCGCTGCCCGTGCAGCCAGAGGATCCAGCACCTCTCTTGGGGCTTCTCCGTCCTCGGCGCTTGGAAGTACGGATCTTTTTTCTCGGAGAAAAGTTCACTGGAACTG",
@@ -44,7 +45,9 @@ def traceback_arrows(i, j, k, seq1_base, seq2_base, seq3_base, D):
     diag_all = D[i - 1][j - 1][k - 1]
 
     match_score_all = (
-        score_matrix[seq1_base][seq2_base] + score_matrix[seq1_base][seq3_base] + score_matrix[seq2_base][seq3_base]
+        score_matrix[seq1_base][seq2_base]
+        + score_matrix[seq1_base][seq3_base]
+        + score_matrix[seq2_base][seq3_base]
     )
 
     match_score_up = score_matrix[seq1_base][seq2_base]
@@ -133,9 +136,15 @@ def D_calc(seq_dict, score_matrix, gap_penalty):
     # it really helps to cache the pairwise alignments, because they are used a lot, theyre probably gonna be cpu cached anyway, but whatever, now theyre explicit.
     # and [i],[j] is the same as [:i], [:j] in the alignment matrix (eg, you dont have to calculate the smaller alignment for every step.)
     # these have to have reversed indexes, because reasons
-    alignmentscache_ij = alignment.LinearGlobalAlignment(seq2, seq1, score_matrix, gap_penalty).matrix
-    alignmentscache_ik = alignment.LinearGlobalAlignment(seq3, seq1, score_matrix, gap_penalty).matrix
-    alignmentscache_jk = alignment.LinearGlobalAlignment(seq3, seq2, score_matrix, gap_penalty).matrix
+    alignmentscache_ij = alignment.LinearGlobalAlignment(
+        seq2, seq1, score_matrix, gap_penalty
+    ).matrix
+    alignmentscache_ik = alignment.LinearGlobalAlignment(
+        seq3, seq1, score_matrix, gap_penalty
+    ).matrix
+    alignmentscache_jk = alignment.LinearGlobalAlignment(
+        seq3, seq2, score_matrix, gap_penalty
+    ).matrix
 
     for i in range(len(seq1)):
         for j in range(len(seq2)):
@@ -212,7 +221,9 @@ def find_center_key(seqs, score, gap):
         score_sum = 0
         for key2, seq2 in seqs.items():
             if key != key2:
-                score_sum += alignment.LinearGlobalAlignment(seq, seq2, score, gap).get_max()
+                score_sum += alignment.LinearGlobalAlignment(
+                    seq, seq2, score, gap
+                ).get_max()
         if score_sum < min_score:
             min_score = score_sum
             center_key = key
@@ -233,14 +244,15 @@ def lists_to_strings(list_of_lists):
 
 def MSA(seqs, score, gap):
     center_key = find_center_key(seqs, score, gap)
-    center_seq = seqs.pop(center_key)
+    center_seq = seqs[center_key]
     alignments = []  # a list is exceptionally terrible to use here.
 
     for key, seq in seqs.items():
-        if center_seq != seq:
-
+        if key != center_key:
             print(f"Aligning {center_key} and {key}")
-            A1 = alignment.LinearGlobalAlignment(seq, center_seq, score, gap).get_alignment()[
+            A1 = alignment.LinearGlobalAlignment(
+                seq, center_seq, score, gap
+            ).get_alignment()[
                 0
             ]  # in hindsight, we probably should have kept the single alignment implementation.
             A2 = strings_to_lists(A1)
@@ -349,7 +361,9 @@ def load_match_scores(path):
             if line:
                 values = line.split()
                 key = values.pop(0)
-                MATCH_SCORES[key] = {k: int(v) for k, v in zip(["A", "C", "G", "T"], values)}
+                MATCH_SCORES[key] = {
+                    k: int(v) for k, v in zip(["A", "C", "G", "T"], values)
+                }
     return MATCH_SCORES
 
 
@@ -366,7 +380,7 @@ def load_sequences(filepath):
 
 
 def experiment_1():
-    ex1_seqs = load_sequences(r"Projects\Project 3\data\brca1-testseqs.fasta")
+    ex1_seqs = load_sequences(r"Projects\Project3\data\brca1-testseqs.fasta")
     ex1_seqs = dict(list(ex1_seqs.items())[:3])
 
     ex1_optimal = sp_exact_3(ex1_seqs, score_matrix, gap_penalty, alignment=False)
@@ -383,13 +397,15 @@ def experiment_1():
 
 ## experiment 2
 def experiment2_():
-    ex2_seqs = load_sequences(r"Projects\Project 3\data\brca1-testseqs.fasta")
+    ex2_seqs = load_sequences(r"Projects/Project3/data/brca1-testseqs.fasta")
     ex2_seqs = dict(list(ex2_seqs.items())[:5])
 
     ex2_center_key = find_center_key(ex2_seqs, score_matrix, gap_penalty)
     ex2_optimal = MSA_approx_score(ex2_seqs, score_matrix, gap_penalty)
 
-    print(f"\nExperiment 2 optimal score: {ex2_optimal}\n Center sequence: {ex2_center_key}")
+    print(
+        f"\nExperiment 2 optimal score: {ex2_optimal}\n Center sequence: {ex2_center_key}"
+    )
 
 
 # experiment2_()
@@ -430,8 +446,19 @@ def experiment3():
 def presentation():
     seq_sets = [
         ["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus"],
-        ["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens"],
-        ["brca1_bos_taurus", "brca1_canis_lupus", "brca1_gallus_gallus", "brca1_homo_sapiens", "brca1_macaca_mulatta"],
+        [
+            "brca1_bos_taurus",
+            "brca1_canis_lupus",
+            "brca1_gallus_gallus",
+            "brca1_homo_sapiens",
+        ],
+        [
+            "brca1_bos_taurus",
+            "brca1_canis_lupus",
+            "brca1_gallus_gallus",
+            "brca1_homo_sapiens",
+            "brca1_macaca_mulatta",
+        ],
         [
             "brca1_bos_taurus",
             "brca1_canis_lupus",
@@ -447,11 +474,20 @@ def presentation():
 
     with open("alignment.fasta", "w") as f:
         for i, seq_set in enumerate(seq_sets):
-            seqs = {
-                key: value
-                for key, value in load_sequences(r"Projects\Project 3\data\brca1-testseqs.fasta").items()
-                if key in seq_set
-            }
+            seqs = {}
+            for key, value in load_sequences(
+                r"Projects/Project3/data/brca1-testseqs.fasta"
+            ).items():
+                if key in seq_set:
+                    seqs[key] = value
+
+            # seqs = {
+            #     key: value
+            #     for key, value in load_sequences(
+            #         r"Projects/Project3/data/brca1-testseqs.fasta"
+            #     ).items()
+            #     # if key in seq_set
+            # }
             alignment = MSA(seqs, score_matrix, gap_penalty)
             optimal = MSA_approx_score(alignment, score_matrix, gap_penalty)
             print(f"Optimal score for {seq_set}: {optimal}")
