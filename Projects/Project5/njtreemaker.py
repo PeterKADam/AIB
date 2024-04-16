@@ -1,7 +1,8 @@
+from Bio import Phylo
+from Bio.Phylo.BaseTree import Tree, Clade
 
-import
 
-
+<<<<<<< HEAD
 def load_distancematrix(path):  
 	distance_matrix = []
 
@@ -23,19 +24,33 @@ def load_distancematrix(path):
     return distance_matrix
 
 print(load_distancematrix("example_slide4.phy"))
+=======
+def load_distancematrix():
+    return matrix
+>>>>>>> 73e92150183b873873e431d6b8f3512fc5239026
 
-def build_root_tree(matrix):
-	return tree
 
-def update_matrix(tree):
-	return matrix
+def build_root_tree(matrix: list[list]) -> Tree:
 
-def add_node_to_tree(tree,something):
-	return tree
+    clades = [Clade(None, name) for name in matrix[0][1:]]
 
-def terminate(tree):
-	return tree
+    tree = Tree(clades=clades, rooted=False)
 
-def save_newick(tree):
-	return
- 
+    return tree
+
+
+def update_matrix(tree: Tree) -> list[list]:
+    return matrix
+
+
+def add_node_to_tree(tree: Tree, something) -> Tree:
+    return tree
+
+
+def terminate(tree) -> Tree:
+    return tree
+
+
+def save_newick(tree: BaseTree.Tree, filename: str):
+    Phylo.write(tree, filename, "newick")
+    return
