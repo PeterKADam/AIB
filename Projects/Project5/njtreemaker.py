@@ -2,7 +2,6 @@ from Bio import Phylo
 from Bio.Phylo.BaseTree import Tree, Clade
 
 
-<<<<<<< HEAD
 def load_distancematrix(path):  
 	distance_matrix = []
 
@@ -24,10 +23,8 @@ def load_distancematrix(path):
     return distance_matrix
 
 print(load_distancematrix("example_slide4.phy"))
-=======
 def load_distancematrix():
     return matrix
->>>>>>> 73e92150183b873873e431d6b8f3512fc5239026
 
 
 def build_root_tree(matrix: list[list]) -> Tree:
