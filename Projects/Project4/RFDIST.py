@@ -47,7 +47,13 @@ def calcRFDist(
     return len(splits1) + len(splits2) - 2 * shared
 
 
-# t1 = loadtree(sys.argv[1])
-# t2 = loadtree(sys.argv[2])
+# t1 = loadtree("Projects/Project4/QT_Exp1_Muscle.stockholm.new")
+# t1 = Phylo.read("Projects/Project4/QT_Exp1_Muscle.stockholm.new", "newick")
+# t2 = loadtree("Projects/Project4/QT_Exp1_Muscle.stockholm.new")
 
 # print(calcRFDist(findsplits(t1), findsplits(t2)))
+if __name__ == "__main__":
+    t1 = loadtree(sys.argv[1])
+    t2 = loadtree(sys.argv[2])
+
+    print(calcRFDist(findsplits(t1), findsplits(t2)))
