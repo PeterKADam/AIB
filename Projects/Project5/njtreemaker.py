@@ -26,18 +26,19 @@ def load_distancematrix(path):
     return distance_matrix
 
 
+def save_newick(tree: Tree, filename: str):
+    Phylo.write(tree, filename, "newick")
+    return
+
+
 def build_root_tree(matrix: list[list]) -> Tree:
 
     root_clade = Clade()
 
-    clades = [Clade(None, name) for name in matrix[0][1:]]
-
-    for clade in clades:
+    for clade in [Clade(None, name) for name in matrix[0][1:]]:
         root_clade.clades.append(clade)
 
-    tree = Tree(root=root_clade, rooted=False)
-
-    return tree
+    return Tree(root=root_clade, rooted=False)
 
 
 def calc_nij(matrix, i, j):
@@ -53,13 +54,14 @@ def n_matrix(matrix, tree):
     n_matrix = [[0 for _ in range(len(matrix))] for _ in range(len(matrix))]
 
     n_matrix[0] = matrix[0]
+
     for i in range(1, len(matrix)):
         n_matrix[i][0] = matrix[i][0]
 
     for i in range(1, len(matrix)):
         for j in range(1, len(matrix)):
-
             n_matrix[i][j] = calc_nij(matrix, i, j)
+
     return n_matrix
 
 
@@ -81,9 +83,7 @@ def select_neighbors(n_matrix, tree: Tree) -> tuple[Clade, Clade]:
     return min_i, min_j
 
 
-def get_neighbor_clades(
-    tree: Tree, n_matrix: list[list], min_i: int, min_j: int
-) -> tuple[Clade, Clade]:
+def get_neighbor_clades(tree: Tree, n_matrix: list[list], min_i: int, min_j: int) -> tuple[Clade, Clade]:
 
     clade_i = next(tree.find_elements(name=n_matrix[min_i][0]))
     clade_j = next(tree.find_elements(name=n_matrix[0][min_j]))
@@ -110,26 +110,21 @@ def update_d_matrix(matrix: list[list], tree: Tree, i: int, j: int) -> list[list
     matrix = [row for k, row in enumerate(matrix) if k not in {i, j}]
     matrix = [[col for l, col in enumerate(row) if l not in {i, j}] for row in matrix]
 
-    # Add a new row for k_ij
     matrix.append(["k_ij"] + k_ij)
 
     # Add a new column for k_ij, excluding the header row and the last row
-    for idx, row in enumerate(
-        matrix[1:-1], start=1
-    ):  # Exclude the header row and the last row
-        row.append(k_ij[idx - 1])  # Use idx-1 as we've excluded the header
+    for idx, row in enumerate(matrix[1:-1], start=1):
+        row.append(k_ij[idx - 1])
 
     # Add a header for the new column
     matrix[0].append("k_ij")
 
-    matrix[0][0] -= 1  # Decrement the size of the matrix
+    matrix[0][0] -= 1  # |S|
 
     return matrix
 
 
-def collapse_neighbors(
-    tree: Tree, clades: tuple[Clade, Clade], n_matrix, i, j, matrix
-) -> Tree:
+def collapse_neighbors(tree: Tree, clades: tuple[Clade, Clade], n_matrix, i, j, matrix) -> Tree:
 
     clade_i, clade_j = clades
     new_clade = Clade(name=f"k_{clade_i.name}{clade_j.name}")
@@ -154,11 +149,6 @@ def terminate(tree) -> Tree:
     return tree
 
 
-def save_newick(tree: Tree, filename: str):
-    Phylo.write(tree, filename, "newick")
-    return
-
-
 def main():
     matrix = load_distancematrix("Projects/Project5/example_slide4.phy")
 
@@ -174,9 +164,7 @@ def main():
 
     nmatrix = n_matrix(matrix, tree)
     clades = get_neighbor_clades(tree, nmatrix, *select_neighbors(nmatrix, tree))
-    tree = collapse_neighbors(
-        tree, clades, nmatrix, *select_neighbors(nmatrix, tree), matrix
-    )
+    tree = collapse_neighbors(tree, clades, nmatrix, *select_neighbors(nmatrix, tree), matrix)
     matrix = update_d_matrix(matrix, tree, *select_neighbors(nmatrix, tree))
     print(f"\nnew matrix:{matrix}")
 
