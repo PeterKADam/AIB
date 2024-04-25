@@ -103,7 +103,6 @@ def update_d_matrix(matrix: list[list], tree: Tree, i: int, j: int) -> list[list
         if m not in {i, j}
     ]
 
-    # Append 0 for the k_ij to k_ij distance
     k_ij.append(0.0)
 
     # Remove the rows and columns corresponding to i and j
@@ -112,11 +111,9 @@ def update_d_matrix(matrix: list[list], tree: Tree, i: int, j: int) -> list[list
 
     matrix.append(["k_ij"] + k_ij)
 
-    # Add a new column for k_ij, excluding the header row and the last row
     for idx, row in enumerate(matrix[1:-1], start=1):
         row.append(k_ij[idx - 1])
 
-    # Add a header for the new column
     matrix[0].append("k_ij")
 
     matrix[0][0] -= 1  # |S|
