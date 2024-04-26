@@ -41,6 +41,10 @@ def build_root_tree(matrix: list[list]) -> Tree:
     return Tree(root=root_clade, rooted=False)
 
 
+def r_x(matrix, x):
+    return ((1 / matrix[0][0]) - 2) * sum(matrix[x][1:])
+
+
 def calc_nij(matrix, i, j):
     d_ij = matrix[i][j]
     r_i = r_x(matrix, i)
@@ -89,10 +93,6 @@ def get_neighbor_clades(tree: Tree, n_matrix: list[list], min_i: int, min_j: int
     clade_j = next(tree.find_elements(name=n_matrix[0][min_j]))
 
     return clade_i, clade_j
-
-
-def r_x(matrix, x):
-    return ((1 / matrix[0][0]) - 2) * sum(matrix[x][1:])
 
 
 def update_d_matrix(matrix: list[list], tree: Tree, i: int, j: int) -> list[list]:
