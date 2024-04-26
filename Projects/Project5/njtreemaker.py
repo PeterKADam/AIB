@@ -141,7 +141,22 @@ def collapse_neighbors(tree: Tree, clades: tuple[Clade, Clade], n_matrix, i, j, 
     return tree
 
 
-def terminate(tree) -> Tree:
+def terminate(tree: Tree, matrix) -> Tree:
+    
+    v = tree.root
+    v.name = "v"
+
+    gamma_vi = (matrix[1][2]+matrix[1][3]-matrix[2][3])/2
+    gamma_vj = (matrix[1][2]+matrix[2][3]-matrix[1][3])/2
+    gamma_vm = (matrix[1][3]+matrix[2][3]-matrix[1][2])/2
+
+    for clade in v.clades:
+        if clade.name == matrix[1][0]:
+            clade.branch_length = gamma_vi
+        if clade.name == matrix[2][0]:
+            clade.branch_length = gamma_vj
+        if clade.name == matrix[3][0]:
+            clade.branch_length = gamma_vm
 
     return tree
 
