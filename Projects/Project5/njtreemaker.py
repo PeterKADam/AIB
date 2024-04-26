@@ -1,7 +1,6 @@
 from Bio import Phylo
 from Bio.Phylo.BaseTree import Tree, Clade
-import numpy as np
-from typing import Tuple
+import sys
 
 
 def load_distancematrix(path):
@@ -28,7 +27,6 @@ def load_distancematrix(path):
 
 def save_newick(tree: Tree, filename: str):
     Phylo.write(tree, filename, "newick")
-    return
 
 
 def build_root_tree(matrix: list[list]) -> Tree:
@@ -42,7 +40,7 @@ def build_root_tree(matrix: list[list]) -> Tree:
 
 
 def r_x(matrix, x):
-    return ((1 / matrix[0][0]) - 2) * sum(matrix[x][1:])
+    return 1 / (matrix[0][0] - 2) * sum(matrix[x][1:])
 
 
 def calc_nij(matrix, i, j):
@@ -53,7 +51,7 @@ def calc_nij(matrix, i, j):
     return n_ij
 
 
-def n_matrix(matrix, tree):
+def n_matrix(matrix):
 
     n_matrix = [[0 for _ in range(len(matrix))] for _ in range(len(matrix))]
 
@@ -64,12 +62,15 @@ def n_matrix(matrix, tree):
 
     for i in range(1, len(matrix)):
         for j in range(1, len(matrix)):
-            n_matrix[i][j] = calc_nij(matrix, i, j)
+            if i != j:
+                n_matrix[i][j] = calc_nij(matrix, i, j)
+            else:
+                n_matrix[i][j] = float("inf")
 
     return n_matrix
 
 
-def select_neighbors(n_matrix, tree: Tree) -> tuple[Clade, Clade]:
+def select_neighbors(n_matrix) -> tuple[Clade, Clade]:
     min_n_ij = 10000
 
     min_i = float("inf")
@@ -87,7 +88,9 @@ def select_neighbors(n_matrix, tree: Tree) -> tuple[Clade, Clade]:
     return min_i, min_j
 
 
-def get_neighbor_clades(tree: Tree, n_matrix: list[list], min_i: int, min_j: int) -> tuple[Clade, Clade]:
+def get_neighbor_clades(
+    tree: Tree, n_matrix: list[list], min_i: int, min_j: int
+) -> tuple[Clade, Clade]:
 
     clade_i = next(tree.find_elements(name=n_matrix[min_i][0]))
     clade_j = next(tree.find_elements(name=n_matrix[0][min_j]))
@@ -95,7 +98,9 @@ def get_neighbor_clades(tree: Tree, n_matrix: list[list], min_i: int, min_j: int
     return clade_i, clade_j
 
 
-def update_d_matrix(matrix: list[list], tree: Tree, i: int, j: int) -> list[list]:
+def update_d_matrix(
+    matrix: list[list], clades: tuple[Clade, Clade], i: int, j: int
+) -> list[list]:
     # Calculate k_ij for all m in S except {i, j}
     k_ij = [
         0.5 * (matrix[i][m] + matrix[j][m] - matrix[i][j])
@@ -109,28 +114,38 @@ def update_d_matrix(matrix: list[list], tree: Tree, i: int, j: int) -> list[list
     matrix = [row for k, row in enumerate(matrix) if k not in {i, j}]
     matrix = [[col for l, col in enumerate(row) if l not in {i, j}] for row in matrix]
 
-    matrix.append(["k_ij"] + k_ij)
+    clade_i, clade_j = clades
+    matrix.append([f"{clade_i.name}{clade_j.name}"] + k_ij)
 
     for idx, row in enumerate(matrix[1:-1], start=1):
         row.append(k_ij[idx - 1])
 
-    matrix[0].append("k_ij")
+    matrix[0].append(f"{clade_i.name}{clade_j.name}")
 
     matrix[0][0] -= 1  # |S|
 
     return matrix
 
 
-def collapse_neighbors(tree: Tree, clades: tuple[Clade, Clade], n_matrix, i, j, matrix) -> Tree:
+def collapse_neighbors(
+    tree: Tree, clades: tuple[Clade, Clade], n_matrix, i, j, matrix
+) -> Tree:
 
     clade_i, clade_j = clades
-    new_clade = Clade(name=f"k_{clade_i.name}{clade_j.name}")
+    new_clade = Clade(name=f"{clade_i.name}{clade_j.name}")
 
     for clade in clades:
         new_clade.clades.append(clade)
         tree.root.clades.remove(clade)
 
     tree.root.clades.append(new_clade)
+
+    h = matrix[i][j]
+    l = r_x(matrix, i)
+    k = r_x(matrix, j)
+    y = matrix[0][0]
+
+    ki = 0.5 * (h + l - k)
 
     gamma_ki = 0.5 * (matrix[i][j] + r_x(matrix, i) - r_x(matrix, j))
     gamma_kj = matrix[i][j] - gamma_ki
@@ -142,13 +157,13 @@ def collapse_neighbors(tree: Tree, clades: tuple[Clade, Clade], n_matrix, i, j, 
 
 
 def terminate(tree: Tree, matrix) -> Tree:
-    
+
     v = tree.root
     v.name = "v"
 
-    gamma_vi = (matrix[1][2]+matrix[1][3]-matrix[2][3])/2
-    gamma_vj = (matrix[1][2]+matrix[2][3]-matrix[1][3])/2
-    gamma_vm = (matrix[1][3]+matrix[2][3]-matrix[1][2])/2
+    gamma_vi = (matrix[1][2] + matrix[1][3] - matrix[2][3]) / 2
+    gamma_vj = (matrix[1][2] + matrix[2][3] - matrix[1][3]) / 2
+    gamma_vm = (matrix[1][3] + matrix[2][3] - matrix[1][2]) / 2
 
     for clade in v.clades:
         if clade.name == matrix[1][0]:
@@ -161,25 +176,23 @@ def terminate(tree: Tree, matrix) -> Tree:
     return tree
 
 
-def main():
-    matrix = load_distancematrix("Projects/Project5/example_slide4.phy")
+def main(input, output):
+    matrix = load_distancematrix(input)
 
     tree = build_root_tree(matrix)
 
-    # print(n_matrix(matrix, tree))
-    # print(select_neighbors(n_matrix(matrix, tree)))
+    while matrix[0][0] > 3:
+        n = n_matrix(matrix)
+        neighbors_index = select_neighbors(n)
+        neighbors = get_neighbor_clades(tree, n, *neighbors_index)
+        tree = collapse_neighbors(tree, neighbors, n, *neighbors_index, matrix)
+        matrix = update_d_matrix(matrix, neighbors, *neighbors_index)
 
-    # print(tree)
+    tree = terminate(tree, matrix)
     # Phylo.draw(tree)
 
-    print(f"old matrix:{matrix}")
-
-    nmatrix = n_matrix(matrix, tree)
-    clades = get_neighbor_clades(tree, nmatrix, *select_neighbors(nmatrix, tree))
-    tree = collapse_neighbors(tree, clades, nmatrix, *select_neighbors(nmatrix, tree), matrix)
-    matrix = update_d_matrix(matrix, tree, *select_neighbors(nmatrix, tree))
-    print(f"\nnew matrix:{matrix}")
+    Phylo.write(tree, output, "newick")
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1], sys.argv[2])
