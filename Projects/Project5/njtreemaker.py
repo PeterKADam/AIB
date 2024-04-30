@@ -25,10 +25,6 @@ def load_distancematrix(path):
     return distance_matrix
 
 
-def save_newick(tree: Tree, filename: str):
-    Phylo.write(tree, filename, "newick")
-
-
 def build_root_tree(matrix: list[list]) -> Tree:
 
     root_clade = Clade()

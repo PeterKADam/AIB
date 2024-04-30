@@ -3,14 +3,9 @@ import timeit
 import subprocess
 import os
 
-
-# Define the commands for njtreemaker, quicktree and rapidnj
-commands = [
-    "njtreemaker",
-    "quicktree",
-    "rapidnj",
-]
-# commands = ["njtreemaker"]
+# Define the commands for njtreemakernumpy, quicktree and rapidnj
+commands = ["njtreemakernumpy", "quicktree", "rapidnj", "njtreemakernumpy"]
+# commands = ["njtreemakernumpy"]
 # Define the path to the distance matrices
 matrix_path = "Projects/Project5/unique_distance_matrices"
 
@@ -30,7 +25,7 @@ with open("runtimes.tsv", "w", newline="") as f:
             "Matrix",
             "QuickTree Time",
             "RapidNJ Time",
-            "njtreemaker",
+            "njtreemakernumpy",
             "Speed-up QT",
             "Speed-up RNJ",
             "RF QT-NJTM",
@@ -40,15 +35,17 @@ with open("runtimes.tsv", "w", newline="") as f:
     )
 
     # Time each command
-    for matrix in matrices:
+    for matrix in matrices[:-1]:
         times = {}
         trees = {}
-        for command in ["quicktree", "rapidnj", "njtreemaker"]:
+        for command in ["quicktree", "rapidnj", "njtreemakernumpy"]:
             start_time = timeit.default_timer()
-            if command == "njtreemaker":
-                tree_file = f"{output_path}/njtreemaker_{os.path.basename(matrix)}.new"
+            if command == "njtreemakernumpy":
+                tree_file = (
+                    f"{output_path}/njtreemakernumpy_{os.path.basename(matrix)}.new"
+                )
                 subprocess.run(
-                    f"python3 Projects/Project5/njtreemaker.py {os.path.join(matrix_path, matrix)} {tree_file}",
+                    f"python3 Projects/Project5/njtreemakernumpy.py {os.path.join(matrix_path, matrix)} {tree_file}",
                     shell=True,
                 )
             elif command == "quicktree":
@@ -70,8 +67,8 @@ with open("runtimes.tsv", "w", newline="") as f:
         # Compute RF distances
         rf_distances = {}
         for pair in [
-            ("quicktree", "njtreemaker"),
-            ("rapidnj", "njtreemaker"),
+            ("quicktree", "njtreemakernumpy"),
+            ("rapidnj", "njtreemakernumpy"),
             ("rapidnj", "quicktree"),
         ]:
             output = subprocess.check_output(
@@ -86,11 +83,11 @@ with open("runtimes.tsv", "w", newline="") as f:
                 matrix,
                 times["quicktree"],
                 times["rapidnj"],
-                times["njtreemaker"],
-                times["quicktree"] / times["njtreemaker"],
-                times["rapidnj"] / times["njtreemaker"],
-                rf_distances[("quicktree", "njtreemaker")],
-                rf_distances[("rapidnj", "njtreemaker")],
+                times["njtreemakernumpy"],
+                times["quicktree"] / times["njtreemakernumpy"],
+                times["rapidnj"] / times["njtreemakernumpy"],
+                rf_distances[("quicktree", "njtreemakernumpy")],
+                rf_distances[("rapidnj", "njtreemakernumpy")],
                 rf_distances[("rapidnj", "quicktree")],
             ]
         )
