@@ -8,11 +8,7 @@ def load_distancematrix(path):
     with open(path, "r") as file:
         lines = file.readlines()
         headers = [line.strip().split()[0] for line in lines[1:]]  # Skip the first line
-        matrix = np.array(
-            [
-                list(map(float, line.strip().split()[1:])) for line in lines[1:]
-            ]  # Skip the first line
-        )
+        matrix = np.array([list(map(float, line.strip().split()[1:])) for line in lines[1:]])  # Skip the first line
     return headers, matrix
 
 
@@ -48,10 +44,21 @@ def n_matrix(matrix):
     for i in range(matrix.shape[0]):
         for j in range(i + 1, matrix.shape[1]):
             n_matrix[i, j] = calc_nij(matrix, i, j, r_cache)
-            n_matrix[j, i] = n_matrix[
-                i, j
-            ]  # Use symmetry to avoid redundant calculations
+            n_matrix[j, i] = n_matrix[i, j]  # Use symmetry to avoid redundant calculations
 
+    return n_matrix
+
+
+def n_matrix_np(matrix):
+    def r_x(matrix, r_cache):
+        if r_cache.get(matrix.shape[0]) is None:
+            r_cache[matrix.shape[0]] = matrix.sum(axis=1) / (2 * (matrix.shape[0] - 2))
+        return r_cache[matrix.shape[0]]
+
+    r_cache = {}
+    r_values = r_x(matrix, r_cache)
+    n_matrix = matrix - r_values[:, None] - r_values[None, :]
+    np.fill_diagonal(n_matrix, 0)
     return n_matrix
 
 
@@ -69,9 +76,7 @@ def select_neighbors(n_matrix):
     return min_i, min_j
 
 
-def get_neighbor_clades(
-    tree: Tree, headers: list, min_i: int, min_j: int
-) -> tuple[Clade, Clade]:
+def get_neighbor_clades(tree: Tree, headers: list, min_i: int, min_j: int) -> tuple[Clade, Clade]:
     clade_i = next(tree.find_elements(name=headers[min_i]))
     clade_j = next(tree.find_elements(name=headers[min_j]))
 
@@ -99,9 +104,34 @@ def update_d_matrix(matrix, headers, i, j):
     return matrix, headers
 
 
-def collapse_neighbors(
-    tree: Tree, headers: list, min_i: int, min_j: int, n_matrix, matrix
-) -> Tree:
+def update_d_matrix_np(matrix, headers, i, j):
+    # Create a mask for all indices except i and j
+    mask = np.ones(matrix.shape[0], dtype=bool)
+    mask[[i, j]] = False
+
+    # Calculate k_ij for the necessary indices
+    k_ij = 0.5 * (matrix[i, mask] + matrix[j, mask] - matrix[i, j])
+
+    # Remove the rows and columns corresponding to i and j
+    matrix = matrix[mask][:, mask]
+
+    # Create a new row and column for k_ij
+    new_row = np.append(k_ij, 0).reshape(1, -1)
+    new_col = np.append(k_ij, [0]).reshape(-1, 1)
+
+    # Append the new row and column to the matrix
+    matrix = np.hstack((matrix, new_col))
+    matrix = np.vstack((matrix, new_row))
+
+    # Update headers
+    merged_clade_name = f"{headers[i]}{headers[j]}"
+    headers = [headers[k] for k in range(len(headers)) if k != i and k != j]
+    headers.append(merged_clade_name)
+
+    return matrix, headers
+
+
+def collapse_neighbors(tree: Tree, headers: list, min_i: int, min_j: int, n_matrix, matrix) -> Tree:
     clade_i, clade_j = get_neighbor_clades(tree, headers, min_i, min_j)
     new_clade = Clade(name=f"{clade_i.name}{clade_j.name}")
 
@@ -111,9 +141,7 @@ def collapse_neighbors(
 
     tree.root.clades.append(new_clade)
 
-    gamma_ki = 0.5 * (
-        matrix[min_i][min_j] + r_x(matrix, min_i, {}) - r_x(matrix, min_j, {})
-    )
+    gamma_ki = 0.5 * (matrix[min_i][min_j] + r_x(matrix, min_i, {}) - r_x(matrix, min_j, {}))
     gamma_kj = matrix[min_i][min_j] - gamma_ki
 
     clade_i.branch_length = gamma_ki
@@ -150,14 +178,19 @@ def main(input, output):
     tree = build_root_tree(headers)
 
     while matrix.shape[0] > 3:
-        t1 = time.perf_counter()
+
         S = matrix.shape[0]
-        n = n_matrix(matrix)
+        t1 = time.perf_counter()
+        n = n_matrix_np(matrix)
+        t2 = time.perf_counter()
+        t3 = time.perf_counter()
+        n2 = n_matrix(matrix)
+        t4 = time.perf_counter()
         min_i, min_j = select_neighbors(n)
         tree = collapse_neighbors(tree, headers, min_i, min_j, n, matrix)
         matrix, headers = update_d_matrix(matrix, headers, min_i, min_j)
-        t2 = time.perf_counter()
-        print(f"S:{S}\tTime: {t2-t1:.2f} sec")
+
+        print(f"S:{S}\tTime: {t2-t1:.3f} | {t4-t3:.3f} sec")
 
     tree = terminate(tree, headers, matrix)
 

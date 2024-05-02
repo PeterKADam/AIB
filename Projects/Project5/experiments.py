@@ -41,9 +41,7 @@ with open("runtimes.tsv", "w", newline="") as f:
         for command in ["quicktree", "rapidnj", "njtreemakernumpy"]:
             start_time = timeit.default_timer()
             if command == "njtreemakernumpy":
-                tree_file = (
-                    f"{output_path}/njtreemakernumpy_{os.path.basename(matrix)}.new"
-                )
+                tree_file = f"{output_path}/njtreemakernumpy_{os.path.basename(matrix)}.new"
                 subprocess.run(
                     f"python3 Projects/Project5/njtreemakernumpy.py {os.path.join(matrix_path, matrix)} {tree_file}",
                     shell=True,
