@@ -4,7 +4,6 @@ import subprocess
 import os
 
 # Define the commands for njtreemakernumpy, quicktree and rapidnj
-commands = ["njtreemakernumpy", "quicktree", "rapidnj", "njtreemakernumpy"]
 # commands = ["njtreemakernumpy"]
 # Define the path to the distance matrices
 matrix_path = "Projects/Project5/unique_distance_matrices"
@@ -38,12 +37,22 @@ with open("runtimes.tsv", "w", newline="") as f:
     for matrix in matrices[:-1]:
         times = {}
         trees = {}
-        for command in ["quicktree", "rapidnj", "njtreemakernumpy"]:
+        for command in ["quicktree", "rapidnj", "njtreemakernumpy", "njtreemaker"]:
             start_time = timeit.default_timer()
             if command == "njtreemakernumpy":
-                tree_file = f"{output_path}/njtreemakernumpy_{os.path.basename(matrix)}.new"
+                tree_file = (
+                    f"{output_path}/njtreemakernumpy_{os.path.basename(matrix)}.new"
+                )
                 subprocess.run(
                     f"python3 Projects/Project5/njtreemakernumpy.py {os.path.join(matrix_path, matrix)} {tree_file}",
+                    shell=True,
+                )
+            elif command == "njtreemaker":
+                tree_file = (
+                    f"{output_path}/njtreemakernumpy_{os.path.basename(matrix)}.new"
+                )
+                subprocess.run(
+                    f"python3 Projects/Project5/njtreemaker.py {os.path.join(matrix_path, matrix)} {tree_file}",
                     shell=True,
                 )
             elif command == "quicktree":
