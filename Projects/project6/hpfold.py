@@ -5,7 +5,11 @@ from typing import List, Tuple
 def hp_matches(input: str):
 
     evenodd = [
-        ("e" if i % 2 == 0 and char == "h" else "o" if i % 2 == 1 and char == "h" else "p")
+        (
+            "e"
+            if i % 2 == 0 and char == "h"
+            else "o" if i % 2 == 1 and char == "h" else "p"
+        )
         for i, char in enumerate(input.lower())
     ]
 
@@ -39,10 +43,7 @@ def fold(string):
         folding.append(match[0][0] * "e")
         center = match[0][1] - match[0][0]
         east = (center - 1) // 2
-        folding.append(east * "e")
-        folding.append("s")
-        folding.append(east * "w")
-
+        folding.append(f"{east * 'e'}s{east * 'w'}")
     else:
         folding.append((match[0][0]) * "e")
 
